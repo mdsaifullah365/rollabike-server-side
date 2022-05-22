@@ -39,6 +39,22 @@ async function run() {
     const orderCollection = client.db("roll-a-bike").collection("orders");
     const userCollection = client.db("roll-a-bike").collection("users");
 
+    const verifyAdmin = async (req, res, next) => {
+      const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      if (decodedEmail === userEmail) {
+        const query = { email: decodedEmail };
+        const user = await userCollection.findOne(query);
+        if (user.role === "admin") {
+          next();
+        } else {
+          return res.status(403).send({ message: "Forbidden Access" });
+        }
+      } else {
+        return res.status(403).send({ message: "Forbidden Access" });
+      }
+    };
+
     // Get All Products
     app.get("/product", async (req, res) => {
       const cursor = productCollection.find({});
@@ -96,6 +112,11 @@ async function run() {
         expiresIn: "1d",
       });
       res.send({ result, token });
+    });
+
+    // isAdmin
+    app.get("/admin", verifyToken, verifyAdmin, (req, res) => {
+      res.status(200).send({ admin: true });
     });
   } finally {
     // await client.close();

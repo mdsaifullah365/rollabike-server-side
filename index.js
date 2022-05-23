@@ -153,7 +153,6 @@ async function run() {
           updatedDoc,
           option
         );
-        console.log(result);
         res.send(result);
       }
     });

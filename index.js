@@ -133,6 +133,31 @@ async function run() {
       }
     });
 
+    // Update an Order when payment successfull
+    app.put("/order/:id", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      if (decodedEmail === userEmail) {
+        const id = req.params.id;
+        const { transactionId } = req.body;
+        const query = { _id: ObjectId(id) };
+        const updatedDoc = {
+          $set: {
+            paid: true,
+            transactionId: transactionId,
+          },
+        };
+        const option = { upsert: true };
+        const result = await orderCollection.updateOne(
+          query,
+          updatedDoc,
+          option
+        );
+        console.log(result);
+        res.send(result);
+      }
+    });
+
     // Create payment intent
     app.post("/create-payment-intent", verifyToken, async (req, res) => {
       const { amount } = req.body;
@@ -149,6 +174,7 @@ async function run() {
         clientSecret: paymentIntent.client_secret,
       });
     });
+
     // Update User and generate a JWT Token
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;

@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 // Middleware
 app.use(express.json());
@@ -132,6 +133,22 @@ async function run() {
       }
     });
 
+    // Create payment intent
+    app.post("/create-payment-intent", verifyToken, async (req, res) => {
+      const { amount } = req.body;
+
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret,
+      });
+    });
     // Update User and generate a JWT Token
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;

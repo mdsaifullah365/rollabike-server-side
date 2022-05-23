@@ -104,7 +104,18 @@ async function run() {
       if (decodedEmail === userEmail) {
         const query = { email: decodedEmail };
         const result = await orderCollection.find(query).toArray();
-        console.log(result);
+        res.send(result);
+      }
+    });
+
+    // Delete an Order
+    app.delete("/order/:id", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      if (decodedEmail === userEmail) {
+        const id = req.params.id;
+        const query = { _id: ObjectId(id) };
+        const result = await orderCollection.deleteOne(query);
         res.send(result);
       }
     });

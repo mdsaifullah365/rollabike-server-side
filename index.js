@@ -97,6 +97,18 @@ async function run() {
       res.send(result);
     });
 
+    // Get all orders of a user
+    app.get("/order", verifyToken, async (req, res) => {
+      const decodedEmail = req.decoded.email;
+      const userEmail = req.query.email;
+      if (decodedEmail === userEmail) {
+        const query = { email: decodedEmail };
+        const result = await orderCollection.find(query).toArray();
+        console.log(result);
+        res.send(result);
+      }
+    });
+
     // Update User and generate a JWT Token
     app.put("/user/:email", async (req, res) => {
       const email = req.params.email;

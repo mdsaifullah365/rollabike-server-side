@@ -134,7 +134,7 @@ async function run() {
       }
     });
 
-    // Update an Order when payment successfull
+    // Update an Order when payment successful
     app.put('/order/:id', verifyToken, async (req, res) => {
       const decodedEmail = req.decoded.email;
       const userEmail = req.query.email;
@@ -167,6 +167,13 @@ async function run() {
         const result = await reviewCollection.insertOne(review);
         res.send(result);
       }
+    });
+
+    // Get all Reviews
+    app.get('/review', async (req, res) => {
+      const query = {};
+      const result = await reviewCollection.find(query).toArray();
+      res.send(result);
     });
 
     // Create payment intent

@@ -109,6 +109,12 @@ async function run() {
       res.send(result);
     });
 
+    // Get all orders
+    app.get('/order/all', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await orderCollection.find({}).toArray();
+      res.send(result);
+    });
+
     // Delete an Order
     app.delete('/order/:id', verifyToken, async (req, res) => {
       const id = req.params.id;

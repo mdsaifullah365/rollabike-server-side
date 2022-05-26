@@ -12,6 +12,7 @@ app.use(express.json());
 app.use(cors());
 const verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
+  const userEmail = req.query.email;
   if (!authHeader) {
     return res.status(401).send({ message: 'Unauthorized Access' });
   }
@@ -20,8 +21,13 @@ const verifyToken = (req, res, next) => {
     if (err) {
       return res.status(403).send({ message: 'Forbidden Access' });
     }
-    req.decoded = decoded;
-    next();
+    const decodedEmail = decoded.email;
+    if (decodedEmail === userEmail) {
+      req.email = decodedEmail;
+      next();
+    } else {
+      return res.status(403).send({ message: 'Forbidden Access' });
+    }
   });
 };
 
@@ -42,16 +48,11 @@ async function run() {
     const reviewCollection = client.db('roll-a-bike').collection('reviews');
 
     const verifyAdmin = async (req, res, next) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const query = { email: decodedEmail };
-        const user = await userCollection.findOne(query);
-        if (user.role === 'admin') {
-          next();
-        } else {
-          return res.status(403).send({ message: 'Forbidden Access' });
-        }
+      const decodedEmail = req.email;
+      const query = { email: decodedEmail };
+      const user = await userCollection.findOne(query);
+      if (user.role === 'admin') {
+        next();
       } else {
         return res.status(403).send({ message: 'Forbidden Access' });
       }
@@ -66,16 +67,10 @@ async function run() {
 
     // Get One Product
     app.get('/product/:id', verifyToken, async (req, res) => {
-      const tokenEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (tokenEmail === userEmail) {
-        const id = req.params.id;
-        const query = { _id: ObjectId(id) };
-        const result = await productCollection.findOne(query);
-        res.send(result);
-      } else {
-        res.status(403).send({ message: 'Forbidden Access' });
-      }
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await productCollection.findOne(query);
+      res.send(result);
     });
 
     // Update a Product
@@ -101,72 +96,49 @@ async function run() {
 
     // Get all orders of a user
     app.get('/order', verifyToken, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const query = { email: decodedEmail };
-        const result = await orderCollection.find(query).toArray();
-        res.send(result);
-      }
+      const decodedEmail = req.email;
+      const query = { email: decodedEmail };
+      const result = await orderCollection.find(query).toArray();
+      res.send(result);
     });
 
     // Delete an Order
     app.delete('/order/:id', verifyToken, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const id = req.params.id;
-        const query = { _id: ObjectId(id) };
-        const result = await orderCollection.deleteOne(query);
-        res.send(result);
-      }
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await orderCollection.deleteOne(query);
+      res.send(result);
     });
 
     // Get one Order
     app.get('/order/:id', verifyToken, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const id = req.params.id;
-        const query = { _id: ObjectId(id) };
-        const result = await orderCollection.findOne(query);
-        res.send(result);
-      }
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await orderCollection.findOne(query);
+      res.send(result);
     });
 
     // Update an Order when payment successful
     app.put('/order/:id', verifyToken, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const id = req.params.id;
-        const { transactionId } = req.body;
-        const query = { _id: ObjectId(id) };
-        const updatedDoc = {
-          $set: {
-            paid: true,
-            transactionId: transactionId,
-          },
-        };
-        const option = { upsert: true };
-        const result = await orderCollection.updateOne(
-          query,
-          updatedDoc,
-          option
-        );
-        res.send(result);
-      }
+      const id = req.params.id;
+      const { transactionId } = req.body;
+      const query = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          paid: true,
+          transactionId: transactionId,
+        },
+      };
+      const option = { upsert: true };
+      const result = await orderCollection.updateOne(query, updatedDoc, option);
+      res.send(result);
     });
 
     // Add a review
     app.post('/review', verifyToken, async (req, res) => {
-      const decodedEmail = req.decoded.email;
-      const userEmail = req.query.email;
-      if (decodedEmail === userEmail) {
-        const review = req.body;
-        const result = await reviewCollection.insertOne(review);
-        res.send(result);
-      }
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.send(result);
     });
 
     // Get all Reviews
@@ -178,8 +150,8 @@ async function run() {
 
     // Create payment intent
     app.post('/create-payment-intent', verifyToken, async (req, res) => {
+      console.log('inside payment intent');
       const { amount } = req.body;
-
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: 'usd',
@@ -208,6 +180,29 @@ async function run() {
         expiresIn: '1d',
       });
       res.send({ result, token });
+    });
+
+    // Get an User
+    app.get('/user/:email', verifyToken, async (req, res) => {
+      const decodedEmail = req.email;
+      console.log('here', decodedEmail);
+      const filter = { email: decodedEmail };
+      const result = await userCollection.findOne(filter);
+      console.log(result);
+      res.send(result);
+    });
+
+    // Update User Info
+    app.put('/user/update/:email', verifyToken, async (req, res) => {
+      const decodedEmail = req.email;
+      const user = req.body;
+      const filter = { email: decodedEmail };
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: user,
+      };
+      const result = await userCollection.updateOne(filter, updateDoc, options);
+      res.send(result);
     });
 
     // isAdmin

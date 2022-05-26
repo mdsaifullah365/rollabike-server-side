@@ -58,6 +58,13 @@ async function run() {
       }
     };
 
+    // Post a Product
+    app.post('/product', verifyToken, verifyAdmin, async (req, res) => {
+      const product = req.body;
+      const result = productCollection.insertOne(product);
+      res.send(result);
+    });
+
     // Get All Products
     app.get('/product', async (req, res) => {
       const cursor = productCollection.find({});
@@ -185,10 +192,14 @@ async function run() {
     // Get an User
     app.get('/user/:email', verifyToken, async (req, res) => {
       const decodedEmail = req.email;
-      console.log('here', decodedEmail);
       const filter = { email: decodedEmail };
       const result = await userCollection.findOne(filter);
-      console.log(result);
+      res.send(result);
+    });
+
+    // Get all User
+    app.get('/user', verifyToken, verifyAdmin, async (req, res) => {
+      const result = await userCollection.find({}).toArray();
       res.send(result);
     });
 
@@ -209,6 +220,36 @@ async function run() {
     app.get('/admin', verifyToken, verifyAdmin, (req, res) => {
       res.status(200).send({ admin: true });
     });
+    // Make Admin
+    app.put('/admin/add/:email', verifyToken, verifyAdmin, async (req, res) => {
+      const email = req.params.email;
+      const filter = { email: email };
+      const updateDoc = {
+        $set: {
+          role: 'admin',
+        },
+      };
+      const result = await userCollection.updateOne(filter, updateDoc);
+      res.send(result);
+    });
+
+    // Remove Admin
+    app.put(
+      '/admin/remove/:email',
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const email = req.params.email;
+        const filter = { email: email };
+        const updateDoc = {
+          $set: {
+            role: 'user',
+          },
+        };
+        const result = await userCollection.updateOne(filter, updateDoc);
+        res.send(result);
+      }
+    );
   } finally {
     // await client.close();
   }

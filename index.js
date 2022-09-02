@@ -3,41 +3,23 @@ const cors = require('cors');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const dbConnect = require('./utils/dbConnect');
+const productRoutes = require('./routes/v1/product.route');
+const viewCount = require('./middlewares/viewCount');
 const app = express();
 const port = process.env.PORT || 5000;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
+// Application level middlewares
+app.use(viewCount);
+
 // Middleware
 app.use(express.json());
 app.use(cors());
-const verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  const userEmail = req.query.email;
-  if (!authHeader) {
-    return res.status(401).send({ message: 'Unauthorized Access' });
-  }
-  const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).send({ message: 'Forbidden Access' });
-    }
-    const decodedEmail = decoded.email;
-    if (decodedEmail === userEmail) {
-      req.email = decodedEmail;
-      next();
-    } else {
-      return res.status(403).send({ message: 'Forbidden Access' });
-    }
-  });
-};
 
 // MongoDB
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.ds8m7.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverApi: ServerApiVersion.v1,
-});
+dbConnect();
+app.use('/api/v1/product', productRoutes);
 
 async function run() {
   try {
@@ -46,53 +28,6 @@ async function run() {
     const orderCollection = client.db('roll-a-bike').collection('orders');
     const userCollection = client.db('roll-a-bike').collection('users');
     const reviewCollection = client.db('roll-a-bike').collection('reviews');
-
-    const verifyAdmin = async (req, res, next) => {
-      const decodedEmail = req.email;
-      const query = { email: decodedEmail };
-      const user = await userCollection.findOne(query);
-      if (user.role === 'admin') {
-        next();
-      } else {
-        return res.status(403).send({ message: 'Forbidden Access' });
-      }
-    };
-
-    // Post a Product
-    app.post('/product', verifyToken, verifyAdmin, async (req, res) => {
-      const product = req.body;
-      const result = productCollection.insertOne(product);
-      res.send(result);
-    });
-
-    // Get All Products
-    app.get('/product', async (req, res) => {
-      const cursor = productCollection.find({});
-      const result = await cursor.toArray();
-      res.send(result);
-    });
-
-    // Get One Product
-    app.get('/product/:id', verifyToken, async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await productCollection.findOne(query);
-      res.send(result);
-    });
-
-    // Update a Product
-    app.patch('/product/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const available = req.body.available;
-      const updatedDoc = {
-        $set: {
-          available: available,
-        },
-      };
-      const result = await productCollection.updateOne(query, updatedDoc);
-      res.send(result);
-    });
 
     // Post an Order
     app.post('/order', async (req, res) => {
@@ -260,7 +195,11 @@ async function run() {
     // await client.close();
   }
 }
-run().catch(console.dir);
+// run().catch(console.dir);
+
+app.all('*', (req, res) => {
+  res.send('No Route Found');
+});
 
 // Port Listening
 app.listen(port, () => {

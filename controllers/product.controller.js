@@ -62,7 +62,15 @@ module.exports.updateAProduct = async (req, res) => {
     }
 
     const query = { _id: ObjectId(id) };
-    const result = await db.collection('products').findOne(query);
+    const available = req.body.available;
+
+    const updateDoc = {
+      $set: {
+        available: available,
+      },
+    };
+
+    const result = await db.collection('products').updateOne(query, updateDoc);
 
     res.send(result);
   } catch (error) {

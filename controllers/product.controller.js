@@ -1,33 +1,73 @@
-module.exports.getAllProducts = (req, res) => {
-  //   const cursor = productCollection.find({});
-  //   const result = await cursor.toArray();
-  //   res.send(result);
+const { ObjectId } = require('mongodb');
+const { getDb } = require('../utils/dbConnect');
 
-  res.send('product found');
+module.exports.getAllProducts = async (req, res) => {
+  try {
+    const db = getDb();
+
+    const result = await db.collection('products').find({}).toArray();
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
-module.exports.postAProduct = (req, res) => {
-  // const product = req.body;
-  // const result = productCollection.insertOne(product);
-  // res.send(result);
+module.exports.postAProduct = async (req, res) => {
+  try {
+    const db = getDb();
+    const product = req.body;
 
-  res.send('product added');
+    const result = await db.collection('products').insertOne(product);
+
+    if (!result.insertedId) {
+      console.log(err);
+      return;
+    }
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
-module.exports.getProductDetails = (req, res) => {
-  // const id = req.params.id;
-  // const query = { _id: ObjectId(id) };
-  // const result = await productCollection.findOne(query);
-  // res.send(result);
+module.exports.getProductDetails = async (req, res) => {
+  try {
+    const db = getDb();
+    const id = req.params.id;
 
-  res.send('got product details');
+    if (!ObjectId.isValid(id)) {
+      return res
+        .send(400)
+        .json({ success: false, error: 'Product ID is invalid' });
+    }
+
+    const query = { _id: ObjectId(id) };
+    const result = await db.collection('products').findOne(query);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+  }
 };
 
-module.exports.updateAProduct = (req, res) => {
-  // const id = req.params.id;
-  // const query = { _id: ObjectId(id) };
-  // const result = await productCollection.findOne(query);
-  // res.send(result);
+module.exports.updateAProduct = async (req, res) => {
+  try {
+    const db = getDb();
+    const id = req.params.id;
+
+    if (!ObjectId.isValid(id)) {
+      return res
+        .send(400)
+        .json({ success: false, error: 'Product ID is invalid' });
+    }
+
+    const query = { _id: ObjectId(id) };
+    const result = await db.collection('products').findOne(query);
+
+    res.send(result);
+  } catch (error) {
+    console.log(error);
+  }
 
   res.send('product updated');
 };

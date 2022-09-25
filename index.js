@@ -6,6 +6,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const dbConnect = require('./utils/dbConnect');
 const productRoutes = require('./routes/v1/product.route');
 const viewCount = require('./middlewares/viewCount');
+const { connectToServer } = require('./utils/dbConnect');
 const app = express();
 const port = process.env.PORT || 5000;
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -18,16 +19,32 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB
-dbConnect();
+connectToServer((err) => {
+  if (!err) {
+    app.listen(port, () => {
+      console.log('Server is running...');
+    });
+  } else {
+    console.log(err);
+  }
+});
+
 app.use('/api/v1/product', productRoutes);
 
 async function run() {
   try {
-    await client.connect();
-    const productCollection = client.db('roll-a-bike').collection('products');
-    const orderCollection = client.db('roll-a-bike').collection('orders');
-    const userCollection = client.db('roll-a-bike').collection('users');
-    const reviewCollection = client.db('roll-a-bike').collection('reviews');
+    // await client.connect();
+    // const productCollection = client.db('roll-a-bike').collection('products');
+    // const orderCollection = client.db('roll-a-bike').collection('orders');
+    // const userCollection = client.db('roll-a-bike').collection('users');
+    // const reviewCollection = client.db('roll-a-bike').collection('reviews');
+
+    // const db = getDb();
+
+    // const productCollection = db.collection('products');
+    // const orderCollection = db.collection('orders');
+    // const userCollection = db.collection('users');
+    // const reviewCollection = db.collection('reviews');
 
     // Post an Order
     app.post('/order', async (req, res) => {
@@ -202,6 +219,3 @@ app.all('*', (req, res) => {
 });
 
 // Port Listening
-app.listen(port, () => {
-  console.log('Server is running...');
-});
